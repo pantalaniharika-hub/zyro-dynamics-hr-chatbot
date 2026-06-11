@@ -1,0 +1,15 @@
+streamlit
+langchain
+langchain-community
+langchain-huggingface
+langchain-groq
+langchain-google-genai
+langchain-openai
+langchain-core
+faiss-cpu
+pypdf
+sentence-transformers
+transformers
+torch
+groq
+tiktoken
