@@ -149,9 +149,10 @@ if vectorstore is None:
     st.error("Could not find any HR policy PDF files in the repository. Please upload them directly to your repository root.")
     st.stop()
 
+# Using high-recall similarity search matching the Kaggle notebook
 retriever = vectorstore.as_retriever(
-    search_type="mmr",
-    search_kwargs={"k": 8, "fetch_k": 25}
+    search_type="similarity",
+    search_kwargs={"k": 8}
 )
 
 # Initialize LLM
@@ -188,14 +189,14 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 RAG_PROMPT = ChatPromptTemplate.from_template(
-    "You are a professional HR assistant for Acrux Dynamics (the company described in the policy documents).\n"
-    "Your task is to answer the employee's HR question as thoroughly, accurately, and completely as possible, using ONLY the context provided below.\n\n"
+    "You are a professional HR assistant for Acrux Dynamics.\n"
+    "Answer the employee's HR question as accurately, directly, and concisely as possible using only the context below.\n\n"
     "Rules for answering:\n"
-    "1. Complete Coverage: Identify if the question has multiple parts. Address EVERY single part of the question explicitly and in detail.\n"
-    "2. Grounding: Rely ONLY on the clear facts mentioned in the context. Do not make up facts, extrapolate, or use outside knowledge.\n"
-    "3. Exact Details: Quote any specific policy names, numbers, grade levels (e.g., L4, Senior), eligibility criteria, limits, amounts, cut-off dates, and credit dates exactly as they are written in the context.\n"
-    "4. Tone: Keep a formal, professional, helpful corporate HR tone.\n"
-    "5. Company Name: Refer to the company strictly as 'Acrux Dynamics'. Do not mention 'Zyro Dynamics' in your answers.\n\n"
+    "1. Directness: Start answering the question immediately. Do NOT include any conversational filler, introductory phrases (like 'Based on the context...', 'According to the policy...'), or concluding sentences. State only the facts.\n"
+    "2. Complete Coverage: Address every part of the question explicitly. If a question asks for multiple things, address each part clearly in a short paragraph or bullet point.\n"
+    "3. Accuracy: State names, policy numbers, dates, rates, and figures exactly as they appear in the context. Do not extrapolate.\n"
+    "4. Company Name: Refer to the company strictly as 'Acrux Dynamics'. Do not use the name 'Zyro Dynamics' in your answers.\n"
+    "5. Truthfulness: If the context does not contain the answer, say exactly: 'I cannot find the answer to this question in the policy documents.'\n\n"
     "Context:\n{context}\n\n"
     "Question: {question}\n\n"
     "Answer:"
