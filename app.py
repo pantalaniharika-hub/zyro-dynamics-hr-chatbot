@@ -112,10 +112,8 @@ def get_vectorstore():
         
     from langchain_community.document_loaders import PyPDFLoader
     from langchain_text_splitters import RecursiveCharacterTextSplitter
-    from langchain_huggingface import HuggingFaceEmbedembeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-mpnet-base-v2",
-        model_kwargs={'device': 'cpu'}
-    )
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from langchain_community.vectorstores import FAISS
     
     documents = []
     for path in pdf_paths:
@@ -279,7 +277,7 @@ if user_query := st.chat_input("Ask a question about HR policies..."):
                             page = doc.metadata.get("page", 0) + 1
                             citation = f"{filename} (Page {page})"
                             if citation not in citations:
-                                                    citations.append(citation)
+                                citations.append(citation)
                                 
                         st.write(answer)
                         if citations:
@@ -295,4 +293,3 @@ if user_query := st.chat_input("Ask a question about HR policies..."):
                         })
                     except Exception as e:
                         st.error(f"Error generating answer: {e}")
-"""
