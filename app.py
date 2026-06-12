@@ -127,8 +127,8 @@ def get_vectorstore():
         return None
         
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
+        chunk_size=120,
+        chunk_overlap=20,
         length_function=len
     )
     chunks = splitter.split_documents(documents)
@@ -149,10 +149,9 @@ if vectorstore is None:
     st.error("Could not find any HR policy PDF files in the repository. Please upload them directly to your repository root.")
     st.stop()
 
-# Using high-recall similarity search matching the Kaggle notebook
 retriever = vectorstore.as_retriever(
-    search_type="similarity",
-    search_kwargs={"k": 8}
+    search_type="mmr",
+    search_kwargs={"k": 8, "fetch_k": 25}
 )
 
 # Initialize LLM
@@ -189,14 +188,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 RAG_PROMPT = ChatPromptTemplate.from_template(
-    "You are a professional HR assistant for Acrux Dynamics.\n"
-    "Answer the employee's HR question as accurately, directly, and concisely as possible using only the context below.\n\n"
+    "You are a professional HR assistant for Zyro Dynamics (referred to as Acrux Dynamics in employee questions).\n"
+    "Answer the employee's HR question as accurately, directly, and completely as possible using only the context below.\n\n"
     "Rules for answering:\n"
-    "1. Directness: Start answering the question immediately. Do NOT include any conversational filler, introductory phrases (like 'Based on the context...', 'According to the policy...'), or concluding sentences. State only the facts.\n"
-    "2. Complete Coverage: Address every part of the question explicitly. If a question asks for multiple things, address each part clearly in a short paragraph or bullet point.\n"
-    "3. Accuracy: State names, policy numbers, dates, rates, and figures exactly as they appear in the context. Do not extrapolate.\n"
-    "4. Company Name: Refer to the company strictly as 'Acrux Dynamics'. Do not use the name 'Zyro Dynamics' in your answers.\n"
-    "5. Truthfulness: If the context does not contain the answer, say exactly: 'I cannot find the answer to this question in the policy documents.'\n\n"
+    "1. Directness: Start answering the question immediately. Do NOT include any conversational filler, introductory phrases (such as 'Based on the context...', 'According to the policy...'), or concluding sentences. State only the facts.\n"
+    "2. Complete Coverage: Address every part of the question explicitly. Extract and state all numbers, dates, rates, timelines, limits, conditions, eligibility criteria, and exceptions exactly as they appear in the context. Do not summarize or omit anything.\n"
+    "3. Naming: Refer to the company using the name mentioned in the question (e.g. if the question asks about 'Acrux Dynamics', refer to it as 'Acrux Dynamics'; if it asks about 'Zyro Dynamics', refer to it as 'Zyro Dynamics'). Do not default to Zyro Dynamics if the question specifies Acrux Dynamics.\n"
+    "4. Truthfulness: If the context does not contain the answer, say exactly: 'I cannot find the answer to this question in the policy documents.'\n\n"
     "Context:\n{context}\n\n"
     "Question: {question}\n\n"
     "Answer:"
@@ -264,7 +262,8 @@ if user_query := st.chat_input("Ask a question about HR policies..."):
             else:
                 with st.spinner("Searching policies and generating answer..."):
                     try:
-                        docs = retriever.invoke(user_query)
+                        q_norm = user_query.replace("Acrux Dynamics", "Zyro Dynamics").replace("acrux dynamics", "zyro dynamics").replace("Acrux", "Zyro").replace("acrux", "zyro")
+                        docs = retriever.invoke(q_norm)
                         context_text = "\n\n".join(f"[Source: {os.path.basename(doc.metadata.get('source', ''))}] {doc.page_content}" for doc in docs)
                         
                         chain = RAG_PROMPT | llm | StrOutputParser()
