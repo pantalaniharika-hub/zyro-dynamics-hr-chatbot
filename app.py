@@ -1,372 +1,459 @@
-import streamlit as st
 import os
-import re
+import streamlit as st
+from dotenv import load_dotenv
 
-# Set page style and layout
+load_dotenv()
+
+# ─────────────────────────────────────────────
+# Page config  (must be first Streamlit call)
+# ─────────────────────────────────────────────
 st.set_page_config(
     page_title="Zyro Dynamics HR Help Desk",
-    page_icon="💼",
-    layout="centered"
+    page_icon="🏢",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-# Custom premium styling
+# ─────────────────────────────────────────────
+# Custom CSS
+# ─────────────────────────────────────────────
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500;600&display=swap');
-    
-    .stApp {
-        background: radial-gradient(circle at top right, #1e1b4b, #0f172a 60%);
-        color: #f8fafc;
-        font-family: 'Inter', sans-serif;
+    /* Overall background */
+    .stApp { background: #f0f4f8; }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(160deg, #0f2940 0%, #1a4875 100%);
+        color: #e0eaf5;
     }
-    
-    .main-title {
-        font-size: 2.8rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #38bdf8, #818cf8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-        text-align: center;
-        font-family: 'Outfit', sans-serif;
+    section[data-testid="stSidebar"] * { color: #e0eaf5 !important; }
+    section[data-testid="stSidebar"] .stTextInput input {
+        background: rgba(255,255,255,0.1) !important;
+        border: 1px solid rgba(255,255,255,0.25) !important;
+        border-radius: 8px;
     }
-    
-    .subtitle {
-        font-size: 1.1rem;
-        color: #94a3b8;
-        text-align: center;
-        margin-bottom: 2rem;
-        font-family: 'Inter', sans-serif;
+
+    /* Chat message cards */
+    .user-bubble {
+        background: #1a4875;
+        color: #ffffff;
+        border-radius: 18px 18px 4px 18px;
+        padding: 14px 18px;
+        margin: 6px 0 6px 60px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        font-size: 0.95rem;
+        line-height: 1.55;
     }
-    
-    [data-testid="stSidebar"] {
-        background-color: rgba(15, 23, 42, 0.8) !important;
-        backdrop-filter: blur(12px);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    .bot-bubble {
+        background: #ffffff;
+        color: #1e2a3a;
+        border-radius: 18px 18px 18px 4px;
+        padding: 14px 18px;
+        margin: 6px 60px 6px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        border-left: 4px solid #1a4875;
     }
-    
-    [data-testid="stChatMessage"] {
-        background-color: rgba(30, 41, 59, 0.5) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(8px);
-        border-radius: 16px !important;
-        padding: 1rem !important;
-        margin-bottom: 1rem !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    .refusal-bubble {
+        background: #fff8e1;
+        color: #7a5800;
+        border-radius: 18px 18px 18px 4px;
+        padding: 14px 18px;
+        margin: 6px 60px 6px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        font-size: 0.95rem;
+        border-left: 4px solid #f0a500;
     }
-    
-    [data-testid="stChatMessage"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-    }
-    
-    .source-tag {
+
+    /* Source citation pills */
+    .source-pill {
         display: inline-block;
-        padding: 0.25rem 0.75rem;
-        margin: 0.25rem;
-        border-radius: 9999px;
-        background-color: rgba(56, 189, 248, 0.15);
-        color: #38bdf8;
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        font-size: 0.8rem;
+        background: #e8f0fe;
+        color: #1a4875;
+        border-radius: 999px;
+        padding: 3px 12px;
+        font-size: 0.76rem;
+        margin: 3px 4px 3px 0;
+        border: 1px solid #b8d0f0;
         font-weight: 500;
+    }
+    .sources-label {
+        font-size: 0.78rem;
+        color: #6b7a8d;
+        margin-top: 8px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    /* Header bar */
+    .header-bar {
+        background: linear-gradient(90deg, #0f2940 0%, #1a4875 100%);
+        color: white;
+        padding: 20px 32px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        box-shadow: 0 4px 16px rgba(26,72,117,0.25);
+    }
+    .header-title { font-size: 1.6rem; font-weight: 700; margin: 0; }
+    .header-sub   { font-size: 0.9rem; opacity: 0.75; margin: 2px 0 0; }
+
+    /* Spinner override */
+    .stSpinner > div { border-color: #1a4875 transparent transparent !important; }
+
+    /* Chat input */
+    .stChatInput textarea {
+        background: #ffffff !important;
+        border: 1.5px solid #c5d9f0 !important;
+        border-radius: 12px !important;
+        font-size: 0.95rem !important;
+    }
+
+    /* Hide Streamlit default header */
+    header[data-testid="stHeader"] { display: none; }
+
+    /* Quick question button */
+    .stButton button {
+        background: #e8f0fe;
+        color: #1a4875;
+        border: 1px solid #b8d0f0;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        padding: 5px 12px;
+        width: 100%;
+        text-align: left;
+        transition: background 0.15s;
+    }
+    .stButton button:hover {
+        background: #1a4875;
+        color: #ffffff;
+        border-color: #1a4875;
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<h1 class="main-title">Zyro Dynamics HR Help Desk</h1>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Your AI-powered assistant for HR policies, benefits, and general guidelines</p>', unsafe_allow_html=True)
-
-# Sidebar configurations
-st.sidebar.title("Settings & Keys")
-llm_provider = st.sidebar.selectbox("LLM Provider", ["groq", "gemini", "openai"], index=0)
-
-if llm_provider == "groq":
-    default_model = "llama-3.3-70b-versatile"
-    default_api_key = os.environ.get("GROQ_API_KEY", "")
-elif llm_provider == "gemini":
-    default_model = "gemini-2.5-flash"
-    default_api_key = os.environ.get("GOOGLE_API_KEY", "")
-else:
-    default_model = "gpt-4o-mini"
-    default_api_key = os.environ.get("OPENAI_API_KEY", "")
-
-model_name = st.sidebar.text_input("Model Name", default_model)
-api_key = st.sidebar.text_input("Enter API Key", value=default_api_key, type="password")
-
-# Cache vectorstore builder
-@st.cache_resource
-def get_vectorstore():
-    # 1. Walk directory recursively to find all PDFs (excluding virtualenvs, git, etc.)
-    exclude_dirs = {".git", ".venv", "venv", "env", "__pycache__", ".streamlit", "node_modules"}
-    pdf_paths = []
-    for root, dirs, files in os.walk("."):
-        dirs[:] = [d for d in dirs if d not in exclude_dirs and not d.startswith(".")]
-        for file in files:
-            if file.lower().endswith(".pdf"):
-                pdf_paths.append(os.path.join(root, file))
-                
-    if not pdf_paths:
-        return None
-        
+# ─────────────────────────────────────────────
+# Imports (cached heavy work)
+# ─────────────────────────────────────────────
+@st.cache_resource(show_spinner=False)
+def build_pipeline(api_key: str, provider: str = "groq"):
+    """Load docs → chunk → embed → FAISS → LLM → chain. Cached."""
+    import os, sys
     from langchain_community.document_loaders import PyPDFLoader
     from langchain_text_splitters import RecursiveCharacterTextSplitter
     from langchain_huggingface import HuggingFaceEmbeddings
     from langchain_community.vectorstores import FAISS
-    
-    documents = []
-    for path in pdf_paths:
-        try:
-            loader = PyPDFLoader(path)
-            documents.extend(loader.load())
-        except Exception as e:
-            st.error(f"Error loading {os.path.basename(path)}: {e}")
-            
-    if not documents:
-        return None
-        
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.output_parsers import StrOutputParser
+    from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+
+    # Set key
+    os.environ["GROQ_API_KEY"]   = api_key
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_PROJECT"]    = "zyro-rag-challenge"
+
+    # ── Load PDFs ────────────────────────────────────────────
+    CORPUS = "/kaggle/input/zyro-dynamics-hr-corpus/"
+    if not os.path.exists(CORPUS):
+        CORPUS = "./hr_docs/"   # local fallback for dev
+
+    docs = []
+    if os.path.exists(CORPUS):
+        for root, _, files in os.walk(CORPUS):
+            for f in sorted(files):
+                if f.lower().endswith(".pdf"):
+                    try:
+                        docs.extend(PyPDFLoader(os.path.join(root, f)).load())
+                    except Exception:
+                        pass
+
+    if not docs:
+        return None, None, None, "No HR policy documents found. Please check the corpus path."
+
+    # ── Chunk ─────────────────────────────────────────────────
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len
+        chunk_size=800, chunk_overlap=150,
+        separators=["\n\n", "\n", ". ", " ", ""],
     )
-    chunks = splitter.split_documents(documents)
-    
+    chunks = splitter.split_documents(docs)
+
+    # ── Embed ─────────────────────────────────────────────────
     embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-mpnet-base-v2",
-        model_kwargs={'device': 'cpu'}
+        model_name="BAAI/bge-base-en-v1.5",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
     )
-    
-    vectorstore = FAISS.from_documents(chunks, embeddings)
-    return vectorstore
 
-# Load documents and create vector db
-with st.spinner("Loading policy documents... Please wait."):
-    vectorstore = get_vectorstore()
+    # ── Vector store ──────────────────────────────────────────
+    vs = FAISS.from_documents(chunks, embeddings)
+    retriever = vs.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 10, "fetch_k": 40, "lambda_mult": 0.6},
+    )
 
-if vectorstore is None:
-    st.error("Could not find any HR policy PDF files in the repository. Please upload them directly to your repository root.")
-    st.stop()
+    # ── LLM ───────────────────────────────────────────────────
+    from langchain_groq import ChatGroq
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.05, max_tokens=1024)
 
-retriever = vectorstore.as_retriever(
-    search_type="mmr",
-    search_kwargs={"k": 8, "fetch_k": 25}
-)
+    # ── Prompts ───────────────────────────────────────────────
+    RAG_PROMPT = ChatPromptTemplate.from_template(
+        """You are the official HR policy assistant for Zyro Dynamics (also called Acrux Dynamics by employees).
+Answer HR policy questions using ONLY the context below.
 
-# Initialize LLM
-llm = None
-if api_key:
-    if llm_provider == "groq":
-        os.environ["GROQ_API_KEY"] = api_key
-        from langchain_groq import ChatGroq
-        try:
-            llm = ChatGroq(model=model_name, temperature=0.1, max_tokens=512)
-        except Exception as e:
-            st.sidebar.error(f"Error initializing Groq: {e}")
-    elif llm_provider == "gemini":
-        os.environ["GOOGLE_API_KEY"] = api_key
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        try:
-            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.1, max_output_tokens=512)
-        except Exception as e:
-            st.sidebar.error(f"Error initializing Gemini: {e}")
-    elif llm_provider == "openai":
-        os.environ["OPENAI_API_KEY"] = api_key
-        from langchain_openai import ChatOpenAI
-        try:
-            llm = ChatOpenAI(model=model_name, temperature=0.1, max_tokens=512)
-        except Exception as e:
-            st.sidebar.error(f"Error initializing OpenAI: {e}")
+RULES:
+1. Answer DIRECTLY — no preamble like "Based on the context...".
+2. Include EVERY number, date, %, rate, limit, eligibility condition verbatim.
+3. Use bullet points or numbered lists for multi-part answers.
+4. Mirror the company name used in the question (Zyro Dynamics or Acrux Dynamics).
+5. If the answer is not in context, say: "I cannot find the answer to this question in the policy documents."
 
-# Tracing warning
-if not os.environ.get("LANGCHAIN_API_KEY"):
-    st.sidebar.warning("LangSmith API Key is not set in environment. Tracing will be disabled.")
+Context:
+{context}
 
-# Define prompts
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+Question: {question}
 
-RAG_PROMPT = ChatPromptTemplate.from_template(
-    "You are a professional HR assistant for Zyro Dynamics (referred to as Acrux Dynamics in employee questions).\n"
-    "Answer the employee's HR question as accurately, directly, and completely as possible using only the context below.\n\n"
-    "Rules for answering:\n"
-    "1. Directness: Start answering the question immediately. Do NOT include any conversational filler, introductory phrases (such as 'Based on the context...', 'According to the policy...'), or concluding sentences. State only the facts.\n"
-    "2. Complete Coverage: Address every part of the question explicitly. Extract and state all numbers, dates, rates, timelines, limits, conditions, eligibility criteria, and exceptions exactly as they appear in the context. Do not summarize or omit anything.\n"
-    "3. Naming: Refer to the company using the name mentioned in the question (e.g. if the question asks about 'Acrux Dynamics', refer to it as 'Acrux Dynamics'; if it asks about 'Zyro Dynamics', refer to it as 'Zyro Dynamics'). Do not default to Zyro Dynamics if the question specifies Acrux Dynamics.\n"
-    "4. Truthfulness: If the context does not contain the answer, say exactly: 'I cannot find the answer to this question in the policy documents.'\n\n"
-    "Context:\n{context}\n\n"
-    "Question: {question}\n\n"
-    "Answer:"
-)
+Answer:"""
+    )
 
-REFUSAL_MESSAGE = "I can only answer HR-related questions from Zyro Dynamics policy documents."
+    OOS_PROMPT = ChatPromptTemplate.from_template(
+        """Classify whether this question is IN_SCOPE or OUT_OF_SCOPE for an internal HR policy chatbot.
 
-# Chat history initialization
+IN_SCOPE: leave policies, payroll, salary grades, benefits, insurance, performance reviews, 
+          WFH/remote work, onboarding, separation, code of conduct, travel expenses, POSH, PIP, probation.
+OUT_OF_SCOPE: external recruitment/job applications, company financials/revenue, product info, 
+              software tools (CRM/Salesforce/Zoho), ESOPs, or anything unrelated to internal HR.
+
+Question: {question}
+
+Reply with exactly one word: IN_SCOPE or OUT_OF_SCOPE"""
+    )
+
+    def normalize(text):
+        for a, b in [("Acrux Dynamics","Zyro Dynamics"),("acrux dynamics","zyro dynamics"),("Acrux","Zyro"),("acrux","zyro")]:
+            text = text.replace(a, b)
+        return text
+
+    def fmt_docs(docs):
+        parts = []
+        for d in docs:
+            src = os.path.basename(d.metadata.get("source",""))
+            pg  = d.metadata.get("page", 0) + 1
+            parts.append(f"[{src} | p.{pg}]\n{d.page_content}")
+        return "\n\n---\n\n".join(parts)
+
+    chain_info = {
+        "retriever": retriever,
+        "llm": llm,
+        "RAG_PROMPT": RAG_PROMPT,
+        "OOS_PROMPT": OOS_PROMPT,
+        "fmt_docs": fmt_docs,
+        "normalize": normalize,
+    }
+
+    return chain_info, retriever, llm, None
+
+
+REFUSAL = "I can only answer HR-related questions from Zyro Dynamics policy documents."
+
+def ask(question: str, chain_info: dict) -> tuple[str, list[str], bool]:
+    """Returns (answer, citations, is_refusal)."""
+    retriever   = chain_info["retriever"]
+    llm         = chain_info["llm"]
+    RAG_PROMPT  = chain_info["RAG_PROMPT"]
+    OOS_PROMPT  = chain_info["OOS_PROMPT"]
+    fmt_docs    = chain_info["fmt_docs"]
+    normalize   = chain_info["normalize"]
+    from langchain_core.output_parsers import StrOutputParser
+
+    # 1. Out-of-scope check
+    try:
+        oos_chain  = OOS_PROMPT | llm | StrOutputParser()
+        label      = oos_chain.invoke({"question": question}).strip().upper()
+        if "OUT_OF_SCOPE" in label or "OUT" in label:
+            return REFUSAL, [], True
+    except Exception:
+        pass
+
+    # 2. Retrieve + generate
+    q_norm = normalize(question)
+    docs   = retriever.invoke(q_norm)
+    ctx    = fmt_docs(docs)
+
+    rag_chain = RAG_PROMPT | llm | StrOutputParser()
+    answer    = rag_chain.invoke({"context": ctx, "question": question})
+
+    # 3. Build citation list
+    citations = []
+    for d in docs:
+        src = os.path.basename(d.metadata.get("source", "Unknown"))
+        pg  = d.metadata.get("page", 0) + 1
+        cit = f"{src}  (p. {pg})"
+        if cit not in citations:
+            citations.append(cit)
+
+    return answer, citations, False
+
+
+# ─────────────────────────────────────────────
+# Session state
+# ─────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "pipeline" not in st.session_state:
+    st.session_state.pipeline = None
+if "ready" not in st.session_state:
+    st.session_state.ready = False
 
-# Display chat history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
-        if message.get("sources"):
-            st.markdown("---")
-            st.markdown("**Sources Cited:**")
-            for src in message["sources"]:
-                st.markdown(f'<span class="source-tag">📄 {src}</span>', unsafe_allow_html=True)
+# ─────────────────────────────────────────────
+# Sidebar
+# ─────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("## 🏢 HR Help Desk")
+    st.markdown("**Zyro Dynamics Pvt. Ltd.**")
+    st.divider()
 
-# Evaluation answers dictionary for gold standard matching
-EVAL_ANSWERS = {
-    "q01": "Earned Leave accrues at the rate of 1.25 days per month. Employees become eligible for 15 days of Earned Leave upon completion of one year of continuous service, provided they have worked for a minimum of 240 days in that year.",
-    "q02": "A maximum of 45 days of Earned Leave may be carried forward at the end of each financial year (31 March). Any balance exceeding this limit will be automatically encashed at the employee's basic daily rate and credited in the April payroll.",
-    "q03": "Female employees who have completed a minimum of 80 days of service in the 12 months preceding the expected date of delivery are entitled to 26 weeks of paid Maternity Leave for the first two live births. For a third child, the entitlement is 12 weeks.",
-    "q04": "Sick Leave taken for more than 2 consecutive days requires a Medical Certificate from a registered medical practitioner, to be submitted within 3 working days of returning to work.",
-    "q05": "Salaries and professional fees are processed and credited to the employee's registered bank account by the 7th of the following month. The payroll cut-off date is the 24th of each month.",
-    "q06": "The CTC range for an L4 (Senior) grade employee at Acrux Dynamics is Rs. 16.0L to Rs. 26.0L. The bonus target for an L4 grade employee is 10% of CTC.",
-    "q07": "Group Medical Insurance provides coverage of up to Rs. 5,00,000 per year for the employee, spouse, and up to two dependent children at Acrux Dynamics. All premiums are fully paid by the Company. The premium is approximately 0.38% of CTC.",
-    "q08": "An employee is placed on a Performance Improvement Plan (PIP) at Acrux Dynamics when they receive a rating of 1 or 2 in two consecutive review cycles. The duration of a PIP is 60 to 90 days, as determined by the reporting manager and HR Business Partner.",
-    "q09": "The Annual Performance Review (APR) timeline is as follows:\n1 to 20 February: 360 degree feedback collected from peers and subordinates by HR System.\n1 to 10 March: Employee self-assessment submitted on ZyroHR portal by Employee.\n11 to 20 March: Manager completes assessment and submits draft rating by Reporting Manager.\n21 to 25 March: Calibration meeting held with all L6 and above managers by HR and L7+ Leaders.\n26 to 31 March: Final ratings locked and confirmed by HR.\n1 to 10 April: One-on-one feedback conversation between employee and manager by Manager.\n15 April: Increment and promotion letters issued by HR and Finance.",
-    "q10": "All permanent employees at grade L3 and above across all Acrux Dynamics office locations are eligible to apply for WFH arrangements. Employees on probation, employees at grades L1 and L2, and employees deployed at client sites are not eligible unless approved in writing by the HR Director.\nThe types of WFH arrangements available are:\n1. Hybrid WFH: Fixed WFH days as agreed with reporting manager in writing (L3 and above; maximum of 3 days per week).\n2. Full Remote: Employee works entirely from a remote location, formally approved (L5 and above on a case-by-case basis; maximum of 5 days per week).\n3. Ad-hoc WFH: Unplanned, single-day WFH requests for personal or minor health reasons (L3 and above; maximum of 2 days per week).\n4. Emergency WFH: Activated during declared emergencies, natural disasters, or health advisories (available to all employees; as directed by HR).",
-    "q11": "I can only answer HR-related questions from Zyro Dynamics policy documents.",
-    "q12": "I can only answer HR-related questions from Zyro Dynamics policy documents.",
-    "q13": "I can only answer HR-related questions from Zyro Dynamics policy documents.",
-    "q14": "I can only answer HR-related questions from Zyro Dynamics policy documents.",
-    "q15": "I can only answer HR-related questions from Zyro Dynamics policy documents."
-}
+    st.markdown("### ⚙️ Configuration")
+    api_key = st.text_input(
+        "Groq API Key",
+        type="password",
+        placeholder="gsk_...",
+        help="Get a free key at console.groq.com",
+    )
 
-def get_perfect_answer(question: str) -> str:
-    q_clean = question.strip().lower()
-    if "apply for a job" in q_clean or "recruitment" in q_clean or "hiring process" in q_clean:
-        return EVAL_ANSWERS["q11"]
-    if "esop" in q_clean or "stock option" in q_clean:
-        return EVAL_ANSWERS["q12"]
-    if "revenue last year" in q_clean or "performing financially" in q_clean or "financial performance" in q_clean:
-        return EVAL_ANSWERS["q13"]
-    if "acruxcrm" in q_clean or "salesforce" in q_clean:
-        return EVAL_ANSWERS["q14"]
-    if "zoho" in q_clean or "freshworks" in q_clean:
-        return EVAL_ANSWERS["q15"]
-    if "earned leave" in q_clean and ("accrue" in q_clean or "rate" in q_clean) and "one year" in q_clean:
-        return EVAL_ANSWERS["q01"]
-    if "earned leave" in q_clean and ("carried forward" in q_clean or "carry forward" in q_clean):
-        return EVAL_ANSWERS["q02"]
-    if "maternity" in q_clean:
-        return EVAL_ANSWERS["q03"]
-    if "sick leave" in q_clean and ("consecutive" in q_clean or "medical certificate" in q_clean):
-        return EVAL_ANSWERS["q04"]
-    if "salary" in q_clean and ("credited" in q_clean or "cut-off" in q_clean):
-        return EVAL_ANSWERS["q05"]
-    if "l4" in q_clean or ("senior" in q_clean and "ctc" in q_clean):
-        return EVAL_ANSWERS["q06"]
-    if "health insurance" in q_clean or "medical insurance" in q_clean or "insurance coverage" in q_clean:
-        return EVAL_ANSWERS["q07"]
-    if "pip" in q_clean or "performance improvement" in q_clean:
-        return EVAL_ANSWERS["q08"]
-    if "apr" in q_clean or "annual performance review" in q_clean:
-        return EVAL_ANSWERS["q09"]
-    if "work from home" in q_clean or "wfh" in q_clean:
-        return EVAL_ANSWERS["q10"]
-    return None
-
-# User input
-if user_query := st.chat_input("Ask a question about HR policies..."):
-    # Display user message
-    with st.chat_message("user"):
-        st.write(user_query)
-    
-    st.session_state.messages.append({"role": "user", "content": user_query})
-    
-    with st.chat_message("assistant"):
-        # Check fail-safe dictionary first
-        perfect_ans = get_perfect_answer(user_query)
-        if perfect_ans:
-            with st.spinner("Searching policies and generating answer..."):
-                try:
-                    q_norm = user_query.replace("Acrux Dynamics", "Zyro Dynamics").replace("acrux dynamics", "zyro dynamics").replace("Acrux", "Zyro").replace("acrux", "zyro")
-                    docs = retriever.invoke(q_norm)
-                    citations = []
-                    for doc in docs:
-                        src_path = doc.metadata.get("source", "Unknown Policy")
-                        filename = os.path.basename(src_path)
-                        page = doc.metadata.get("page", 0) + 1
-                        citation = f"{filename} (Page {page})"
-                        if citation not in citations:
-                            citations.append(citation)
-                    
-                    st.write(perfect_ans)
-                    if citations:
-                        st.markdown("---")
-                        st.markdown("**Sources Cited:**")
-                        for cit in citations:
-                            st.markdown(f'<span class="source-tag">📄 {cit}</span>', unsafe_allow_html=True)
-                            
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": perfect_ans,
-                        "sources": citations
-                    })
-                except Exception as e:
-                    st.write(perfect_ans)
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": perfect_ans,
-                        "sources": []
-                    })
+    if st.button("🚀 Initialize Chatbot", use_container_width=True):
+        if not api_key.strip():
+            st.error("Please enter a valid Groq API key.")
         else:
-            q_clean = user_query.strip().lower()
-            
-            # Keyword checks for generic out-of-scope questions
-            oos_keywords = [
-                "recruitment", "hiring", "apply for a job", "job application", 
-                "esop", "stock option", "vesting schedule",
-                "revenue last year", "performing financially", "financial performance", "company revenue",
-                "product features", "acruxcrm", "salesforce",
-                "zoho", "freshworks"
-            ]
-            
-            is_oos = any(kw in q_clean for kw in oos_keywords)
-                
-            if is_oos:
-                st.write(REFUSAL_MESSAGE)
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": REFUSAL_MESSAGE,
-                    "sources": []
-                })
-            else:
-                if llm is None:
-                    st.info("Please enter a valid API Key in the sidebar to generate answers.")
+            with st.spinner("Loading HR policy documents and building index…"):
+                chain_info, _, _, err = build_pipeline(api_key.strip())
+                if err:
+                    st.error(err)
                 else:
-                    with st.spinner("Searching policies and generating answer..."):
-                        try:
-                            q_norm = user_query.replace("Acrux Dynamics", "Zyro Dynamics").replace("acrux dynamics", "zyro dynamics").replace("Acrux", "Zyro").replace("acrux", "zyro")
-                            docs = retriever.invoke(q_norm)
-                            context_text = "\n\n".join(f"[Source: {os.path.basename(doc.metadata.get('source', ''))}] {doc.page_content}" for doc in docs)
-                            
-                            chain = RAG_PROMPT | llm | StrOutputParser()
-                            answer = chain.invoke({"context": context_text, "question": user_query})
-                            
-                            citations = []
-                            for doc in docs:
-                                src_path = doc.metadata.get("source", "Unknown Policy")
-                                filename = os.path.basename(src_path)
-                                page = doc.metadata.get("page", 0) + 1
-                                citation = f"{filename} (Page {page})"
-                                if citation not in citations:
-                                    citations.append(citation)
-                                    
-                            st.write(answer)
-                            if citations:
-                                st.markdown("---")
-                                st.markdown("**Sources Cited:**")
-                                for cit in citations:
-                                    st.markdown(f'<span class="source-tag">📄 {cit}</span>', unsafe_allow_html=True)
-                                    
-                            st.session_state.messages.append({
-                                "role": "assistant",
-                                "content": answer,
-                                "sources": citations
-                            })
-                        except Exception as e:
-                            st.error(f"Error generating answer: {e}")
+                    st.session_state.pipeline = chain_info
+                    st.session_state.ready    = True
+                    st.success("✅ HR chatbot ready!")
+
+    st.divider()
+
+    # Quick question examples
+    st.markdown("### 💡 Sample Questions")
+    examples = [
+        "At what rate does Earned Leave accrue per month?",
+        "What is the maximum EL that can be carried forward?",
+        "What is the maternity leave entitlement?",
+        "When is salary credited each month?",
+        "What is the WFH policy for L3 employees?",
+        "Explain the APR timeline.",
+        "What is the PIP process?",
+        "What does Group Medical Insurance cover?",
+    ]
+    for ex in examples:
+        if st.button(ex, key=f"ex_{ex[:20]}"):
+            st.session_state._quick_q = ex
+
+    st.divider()
+    if st.button("🗑️ Clear Chat", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+
+    st.markdown("""
+    <div style='font-size:0.75rem; opacity:0.65; margin-top:20px;'>
+    ℹ️ This chatbot answers questions from Zyro Dynamics internal HR policy documents only.
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# Main area — header
+# ─────────────────────────────────────────────
+st.markdown("""
+<div class="header-bar">
+  <span style="font-size:2.2rem;">🏢</span>
+  <div>
+    <p class="header-title">Zyro Dynamics HR Help Desk</p>
+    <p class="header-sub">AI-powered • Retrieval-Augmented Generation • Policy-grounded answers</p>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+if not st.session_state.ready:
+    st.info("👈 Enter your **Groq API key** in the sidebar and click **Initialize Chatbot** to get started.")
+    st.markdown("""
+    **What this chatbot can help with:**
+    - 🌴 Leave policies (Earned Leave, Sick Leave, Maternity/Paternity)
+    - 💰 Salary, CTC grades, and bonus structure
+    - 🏠 Work-from-home and remote work eligibility
+    - 🏥 Health insurance and benefits coverage
+    - 📊 Performance reviews (APR, PIP, ratings)
+    - 📋 Code of conduct, POSH, onboarding & separation
+    - ✈️ Travel and expense reimbursement
+    """)
+    st.stop()
+
+# ─────────────────────────────────────────────
+# Render chat history
+# ─────────────────────────────────────────────
+chat_container = st.container()
+with chat_container:
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.markdown(f'<div class="user-bubble">👤 {msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            bubble_cls = "refusal-bubble" if msg.get("refusal") else "bot-bubble"
+            icon = "⚠️" if msg.get("refusal") else "🤖"
+            st.markdown(f'<div class="{bubble_cls}">{icon} {msg["content"]}</div>', unsafe_allow_html=True)
+            if msg.get("sources"):
+                pills = "".join(f'<span class="source-pill">📄 {s}</span>' for s in msg["sources"])
+                st.markdown(
+                    f'<div class="sources-label">Sources</div><div>{pills}</div>',
+                    unsafe_allow_html=True,
+                )
+
+# ─────────────────────────────────────────────
+# Handle quick-question button
+# ─────────────────────────────────────────────
+if hasattr(st.session_state, "_quick_q") and st.session_state._quick_q:
+    user_query = st.session_state._quick_q
+    del st.session_state._quick_q
+else:
+    user_query = None
+
+# ─────────────────────────────────────────────
+# Chat input
+# ─────────────────────────────────────────────
+typed = st.chat_input("Ask a question about Zyro Dynamics HR policies…")
+if typed:
+    user_query = typed
+
+if user_query:
+    # Show user message
+    st.markdown(f'<div class="user-bubble">👤 {user_query}</div>', unsafe_allow_html=True)
+    st.session_state.messages.append({"role": "user", "content": user_query})
+
+    with st.spinner("Searching policy documents…"):
+        try:
+            answer, citations, is_refusal = ask(user_query, st.session_state.pipeline)
+        except Exception as e:
+            answer, citations, is_refusal = f"⚠️ Error: {e}", [], False
+
+    bubble_cls = "refusal-bubble" if is_refusal else "bot-bubble"
+    icon       = "⚠️" if is_refusal else "🤖"
+    st.markdown(f'<div class="{bubble_cls}">{icon} {answer}</div>', unsafe_allow_html=True)
+
+    if citations and not is_refusal:
+        pills = "".join(f'<span class="source-pill">📄 {s}</span>' for s in citations)
+        st.markdown(
+            f'<div class="sources-label">Sources</div><div>{pills}</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": answer,
+        "sources": citations,
+        "refusal": is_refusal,
+    })
