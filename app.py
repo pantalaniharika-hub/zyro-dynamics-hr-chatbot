@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
 # =====================================================================
-# 1. PAGE CONFIGURATION & PREMIUM INTERFACE CUSTOMIZATION
+# 1. PAGE CONFIGURATION & ENTERPRISE CSS THEMING
 # =====================================================================
 st.set_page_config(
     page_title="Zyro Dynamics HR Hub",
@@ -13,62 +13,87 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom injection of modern CSS for premium layout presentation
+# Custom injection of modern, high-contrast corporate UI styling
 st.markdown("""
     <style>
-    /* Dark Theme Core Adjustments */
+    /* Dark Theme Canvas Core */
     .stApp {
         background-color: #0b0f19;
     }
     
-    /* Elegant Corporate Header Card */
+    /* Elegant Gradient Corporate Header Card */
     .premium-header {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
         padding: 30px;
         border-radius: 16px;
         color: #ffffff;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        border-left: 6px solid #ff4b4b;
+        margin-bottom: 25px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        border-left: 6px solid #ef4444;
+        border-top: 1px solid #374151;
     }
     .premium-header h1 {
         margin: 0;
-        font-family: 'Helvetica Neue', sans-serif;
-        font-weight: 700;
-        font-size: 28px;
-        letter-spacing: 0.5px;
-        color: #ffffff !important;
+        font-family: 'Inter', 'Helvetica Neue', sans-serif;
+        font-weight: 800;
+        font-size: 32px;
+        letter-spacing: -0.5px;
+        background: linear-gradient(90deg, #ffffff, #9ca3af);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
     .premium-header p {
-        margin: 10px 0 0 0;
+        margin: 12px 0 0 0;
         font-size: 14px;
-        opacity: 0.9;
-        line-height: 1.5;
+        color: #9ca3af;
+        line-height: 1.6;
     }
     
-    /* Custom Stylings for Chat UI Boxes */
+    /* Clean Subtitle Badge */
+    .status-badge {
+        display: inline-block;
+        background-color: #1e293b;
+        color: #38bdf8;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 15px;
+        border: 1px solid #334155;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+    
+    /* Custom Stylings for Native Chat UI Components */
     div[data-testid="stChatMessage"] {
-        border-radius: 12px;
-        padding: 15px;
-        margin-bottom: 12px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        border-radius: 14px !important;
+        padding: 18px !important;
+        margin-bottom: 16px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+        transition: transform 0.2s ease;
+    }
+    div[data-testid="stChatMessage"]:hover {
+        transform: translateY(-1px);
     }
     
-    /* User Chat Bubble Accent */
+    /* User Message Bubble Theme Alignment */
     div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageContent"]):nth-child(odd) {
-        background-color: #1a233a !important;
-        border-right: 4px solid #1e3c72;
+        background-color: #1e293b !important;
+        border-right: 4px solid #3b82f6 !important;
+        border-left: none !important;
     }
     
-    /* Assistant Chat Bubble Accent */
+    /* Assistant Message Bubble Theme Alignment */
     div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageContent"]):nth-child(even) {
         background-color: #111827 !important;
-        border-left: 4px solid #ff4b4b;
+        border-left: 4px solid #ef4444 !important;
+        border-right: none !important;
+        border: 1px solid #1f2937;
     }
     
-    /* Input field spacing adjustment */
+    /* Pin input container tightly to the baseline view safely */
     .stChatInputContainer {
-        padding-bottom: 20px;
+        padding-bottom: 25px;
     }
     </style>
 """, unsafe_html=True)
@@ -167,28 +192,23 @@ def ask_bot(question: str) -> dict:
     return {"answer": "I can only answer HR-related questions from Zyro Dynamics policy documents."}
 
 # =====================================================================
-# 5. USER INTERFACE VIEW LAYER
+# 5. USER INTERFACE RENDERING LAYER
 # =====================================================================
-# Beautiful modern header widget layout
 st.markdown("""
     <div class="premium-header">
         <h1>💼 Zyro Dynamics HR Support Portal</h1>
-        <p>Enterprise AI Knowledge Assistant. Ask any question related to leave calculations, policy exceptions, compensation rules, or company guidelines.</p>
+        <p>Enterprise Knowledge Workspace. Submit formal queries regarding medical coverage tiers, leave accrual matrix evaluations, or compliance standards.</p>
+        <span class="status-badge">🟢 Guardrails Active</span>
     </div>
 """, unsafe_html=True)
 
-st.caption("🔒 Secured with corporate guardrails & context grounding")
-
-# Setup memory state lists
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display past messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Track new incoming prompts
 if prompt := st.chat_input("Ask a question about leave, payroll, or benefits..."):
     with st.chat_message("user"):
         st.markdown(prompt)
