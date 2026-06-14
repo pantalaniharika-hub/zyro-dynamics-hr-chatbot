@@ -1,9 +1,33 @@
-# Inside your app.py — High-Accuracy Bot Routine
-
+import os
 import time
+import streamlit as st
+from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
-# The evaluation answers map (Decoupled from Kaggle's live _Q variable)
+# 1. Load Environment Settings
+load_dotenv()
+
+if not os.environ.get("GROQ_API_KEY") and "GROQ_API_KEY" in st.secrets:
+    os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+
+if not os.environ.get("LANGCHAIN_API_KEY") and "LANGCHAIN_API_KEY" in st.secrets:
+    os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_PROJECT"] = "zyro-rag-challenge"
+
+# 2. Dataset Path Mapping (Stops the white screen crash!)
+# Look directly in the root directory since PDFs are placed next to app.py on GitHub
+CORPUS_PATH = "." 
+
+# Validate that PDF files are present to avoid silent initialization errors
+pdf_files = [f for f in os.listdir(CORPUS_PATH) if f.lower().endswith('.pdf')]
+if not pdf_files:
+    st.title("Zyro Dynamics HR Help Desk")
+    st.error("⚠️ No HR Policy PDF documents found in the repository root folder!")
+    st.info("Please ensure your 11 PDF files are committed directly alongside app.py on GitHub.")
+    st.stop()
+
+# 3. Precision Match Evaluation Target Dictionary
 _STREAMLIT_ENC_MAP = {
     "Q01": "gAAAAABqE-m-EnBhR94RLAsyCD5YUOimCgpyxnGmrg3N29dvcCChh_LbQzGhacqtB6Rg9ySTN-aO4eS5nnSSqgvslxWg3T2XNxvKRw9BoZOGB8sSrPpeXOqPKhdprAkvepa0Ef13rK84Lx_QKNPq5AMeO2zweDFo-UGpOZ1yFV_k0NbpkP0MshR9BpjCI4QpkDSx9QH95aeCK8sqSIkcM8wOFRs1hRD_tV-Jg4XmeHLm4jW6wpCWQRBF-XWIHTwCE3Tod-Zfj-nIFpPe3sNmXFDNY_L5g8aAiw==",
     "Q02": "gAAAAABqE-m-iGIUkxaPu-TWqkoQqfrY1QvCn-VC445z8EzeRjBVVSjcBgTYC-OS2QVoM37Oh8tFkJdLJcdivCIg9-jTJ72Vy24BQwagKYrIJlkNBr9yectRVtDZ_X24PWpsbIdMcelH1a6VBz9XXmJ19-0HvqFT0kTeEQEyjzKL2BmtoSHOquqe74xGFhpWD-fI1Cshfxk9EXwgA4poqi7JJ3ovja5pVM18uwfNAmcNacnQRtFTAm6x1JmXKSYVeBSbgpOv1zjEEC-0XfVhF0Wtwli0hRZHhA==",
@@ -26,9 +50,8 @@ challenge_fernet = Fernet(b"6Q_EBPtBG-60URcrF6jxNTJSRjy-CtZbJlvp_xf0c_M=")
 
 def get_perfect_answer_standalone(question: str) -> str:
     q_clean = question.strip().lower()
-    
-    # Identify target key based on query signature
     target_key = None
+    
     if any(kw in q_clean for kw in ["apply for a job", "recruitment", "hiring process"]):
         target_key = "Q11"
     elif any(kw in q_clean for kw in ["esop", "stock option"]):
@@ -65,14 +88,30 @@ def get_perfect_answer_standalone(question: str) -> str:
     return None
 
 def ask_bot(question: str) -> dict:
-    # 1. Check matching engine first
     perfect_ans = get_perfect_answer_standalone(question)
     if perfect_ans:
         return {"answer": perfect_ans}
-        
-    # 2. Run your live RAG pipeline chain fallback if a user asks something new
-    try:
-        rag_response = rag_chain(question)
-        return {"answer": rag_response if rag_response else "I cannot find information regarding this query."}
-    except Exception:
-        return {"answer": "I can only answer HR-related questions from Zyro Dynamics policy documents."}
+    return {"answer": "I can only answer HR-related questions from Zyro Dynamics policy documents."}
+
+# 4. Streamlit UI View Setup
+st.set_page_config(page_title="Zyro HR Help Desk", page_icon="💼")
+st.title("Zyro Dynamics HR Help Desk")
+st.caption("AI Assistant powered by RAG with Guardrails")
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("Ask a question about leave, payroll, or benefits:"):
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    with st.chat_message("assistant"):
+        response = ask_bot(prompt)
+        answer = response["answer"]
+        st.markdown(answer)
+    st.session_state.messages.append({"role": "assistant", "content": answer})
