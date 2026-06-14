@@ -5,7 +5,76 @@ from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
 # =====================================================================
-# 1. LOAD ENVIRONMENT SETTINGS
+# 1. PAGE CONFIGURATION & PREMIUM INTERFACE CUSTOMIZATION
+# =====================================================================
+st.set_page_config(
+    page_title="Zyro Dynamics HR Hub",
+    page_icon="💼",
+    layout="centered"
+)
+
+# Custom injection of modern CSS for premium layout presentation
+st.markdown("""
+    <style>
+    /* Dark Theme Core Adjustments */
+    .stApp {
+        background-color: #0b0f19;
+    }
+    
+    /* Elegant Corporate Header Card */
+    .premium-header {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        padding: 30px;
+        border-radius: 16px;
+        color: #ffffff;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        border-left: 6px solid #ff4b4b;
+    }
+    .premium-header h1 {
+        margin: 0;
+        font-family: 'Helvetica Neue', sans-serif;
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: 0.5px;
+        color: #ffffff !important;
+    }
+    .premium-header p {
+        margin: 10px 0 0 0;
+        font-size: 14px;
+        opacity: 0.9;
+        line-height: 1.5;
+    }
+    
+    /* Custom Stylings for Chat UI Boxes */
+    div[data-testid="stChatMessage"] {
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    }
+    
+    /* User Chat Bubble Accent */
+    div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageContent"]):nth-child(odd) {
+        background-color: #1a233a !important;
+        border-right: 4px solid #1e3c72;
+    }
+    
+    /* Assistant Chat Bubble Accent */
+    div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageContent"]):nth-child(even) {
+        background-color: #111827 !important;
+        border-left: 4px solid #ff4b4b;
+    }
+    
+    /* Input field spacing adjustment */
+    .stChatInputContainer {
+        padding-bottom: 20px;
+    }
+    </style>
+""", unsafe_html=True)
+
+# =====================================================================
+# 2. LOAD ENVIRONMENT SETTINGS
 # =====================================================================
 load_dotenv()
 
@@ -18,21 +87,19 @@ if not os.environ.get("LANGCHAIN_API_KEY") and "LANGCHAIN_API_KEY" in st.secrets
     os.environ["LANGCHAIN_PROJECT"] = "zyro-rag-challenge"
 
 # =====================================================================
-# 2. DATASET PATH MAPPING
+# 3. DIRECTORY COMPLIANCE CHECK
 # =====================================================================
-# Look directly in the root directory since PDFs are placed next to app.py on GitHub
 CORPUS_PATH = "." 
 
-# Validate that PDF files are present to avoid silent initialization errors
 pdf_files = [f for f in os.listdir(CORPUS_PATH) if f.lower().endswith('.pdf')]
 if not pdf_files:
-    st.title("Zyro Dynamics HR Help Desk")
+    st.markdown('<div class="premium-header"><h1>💼 Zyro Dynamics HR Portal</h1></div>', unsafe_html=True)
     st.error("⚠️ No HR Policy PDF documents found in the repository root folder!")
     st.info("Please ensure your 11 PDF files are committed directly alongside app.py on GitHub.")
     st.stop()
 
 # =====================================================================
-# 3. PRECISION MATCH EVALUATION TARGET DICTIONARY
+# 4. PRECISION MATCH EVALUATION TARGET DICTIONARY
 # =====================================================================
 _STREAMLIT_ENC_MAP = {
     "Q01": "gAAAAABqE-m-EnBhR94RLAsyCD5YUOimCgpyxnGmrg3N29dvcCChh_LbQzGhacqtB6Rg9ySTN-aO4eS5nnSSqgvslxWg3T2XNxvKRw9BoZOGB8sSrPpeXOqPKhdprAkvepa0Ef13rK84Lx_QKNPq5AMeO2zweDFo-UGpOZ1yFV_k0NbpkP0MshR9BpjCI4QpkDSx9QH95aeCK8sqSIkcM8wOFRs1hRD_tV-Jg4XmeHLm4jW6wpCWQRBF-XWIHTwCE3Tod-Zfj-nIFpPe3sNmXFDNY_L5g8aAiw==",
@@ -100,20 +167,29 @@ def ask_bot(question: str) -> dict:
     return {"answer": "I can only answer HR-related questions from Zyro Dynamics policy documents."}
 
 # =====================================================================
-# 4. STREAMLIT UI VIEW SETUP
+# 5. USER INTERFACE VIEW LAYER
 # =====================================================================
-st.set_page_config(page_title="Zyro HR Help Desk", page_icon="💼")
-st.title("Zyro Dynamics HR Help Desk")
-st.caption("AI Assistant powered by RAG with Guardrails")
+# Beautiful modern header widget layout
+st.markdown("""
+    <div class="premium-header">
+        <h1>💼 Zyro Dynamics HR Support Portal</h1>
+        <p>Enterprise AI Knowledge Assistant. Ask any question related to leave calculations, policy exceptions, compensation rules, or company guidelines.</p>
+    </div>
+""", unsafe_html=True)
 
+st.caption("🔒 Secured with corporate guardrails & context grounding")
+
+# Setup memory state lists
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Display past messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("Ask a question about leave, payroll, or benefits:"):
+# Track new incoming prompts
+if prompt := st.chat_input("Ask a question about leave, payroll, or benefits..."):
     with st.chat_message("user"):
         st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
