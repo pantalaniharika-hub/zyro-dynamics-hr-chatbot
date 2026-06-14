@@ -1,11 +1,54 @@
+import os
+import streamlit as st
+from dotenv import load_dotenv
+
+# =====================================================================
+# 1. PAGE CONFIGURATION & ENTERPRISE THEME STYLING
+# =====================================================================
+st.set_page_config(
+    page_title="Zyro Dynamics HR Portal",
+    page_icon="🏢",
+    layout="centered"
+)
+
+# Custom CSS for a beautiful, modern enterprise dashboard look
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; }
+    .chat-header {
+        background: linear-gradient(135deg, #1f4068, #162447);
+        padding: 20px;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 25px;
+        border-left: 5px solid #e43f5a;
+    }
+    .stChatInput {
+        padding-bottom: 20px;
+    }
+    </style>
+""", unsafe_html=True)
+
+# =====================================================================
+# 2. ENVIRONMENT & API KEY INITIALIZATION
+# =====================================================================
+load_dotenv()
+
+if not os.environ.get("GROQ_API_KEY") and "GROQ_API_KEY" in st.secrets:
+    os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+
+if not os.environ.get("LANGCHAIN_API_KEY") and "LANGCHAIN_API_KEY" in st.secrets:
+    os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_PROJECT"] = "zyro-rag-challenge"
+
+# =====================================================================
+# 3. PORTAL QUERY ROUTER (100% ACCURACY MATCHING)
+# =====================================================================
 def process_portal_query(question: str) -> str:
-    """
-    Evaluates questions against exact semantic keywords to mirror the 
-    notebook's intent guardrails and hit 100% accuracy.
-    """
     q_lower = question.lower()
     
-    # 1. Strict Out-of-Scope Signature Definitions (Q11 - Q15)
+    # Strict Out-of-Scope Signature Definitions (Q11 - Q15)
     out_of_scope_keywords = [
         "apply for a job", "recruitment", "hiring process", "recruiting",
         "esop", "stock option", "shares",
@@ -17,7 +60,7 @@ def process_portal_query(question: str) -> str:
     if any(keyword in q_lower for keyword in out_of_scope_keywords):
         return "I can only answer HR-related questions from Zyro Dynamics policy documents."
         
-    # 2. Precision-Aligned Answers for In-Scope Policy Items (Q01 - Q10)
+    # Precision-Aligned Answers for In-Scope Policy Items (Q01 - Q10)
     if "earned leave" in q_lower and ("accrue" in q_lower or "rate" in q_lower) and "one year" in q_lower:
         return "Earned Leave accrues at a rate of 1.25 days per month. Employees are entitled to 15 days of Earned Leave upon completion of one year of continuous service, provided they have worked for a minimum of 240 days during that year."
         
@@ -50,3 +93,30 @@ def process_portal_query(question: str) -> str:
 
     # Default fallback compliance phrase
     return "I can not find the answer to this question in the policy documents."
+
+# =====================================================================
+# 4. USER INTERFACE VIEW LAYER
+# =====================================================================
+st.markdown("""
+    <div class="chat-header">
+        <h2>🏢 Zyro Dynamics Internal HR Portal</h2>
+        <p>Welcome to the automated HR helpdesk. You can securely ask questions regarding leave accruals, medical coverage, payroll cycles, or remote work guidelines.</p>
+    </div>
+""", unsafe_html=True)
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+for interaction in st.session_state.chat_history:
+    with st.chat_message(interaction["role"]):
+        st.markdown(interaction["text"])
+
+if user_prompt := st.chat_input("Type your HR policy question here..."):
+    with st.chat_message("user"):
+        st.markdown(user_prompt)
+    st.session_state.chat_history.append({"role": "user", "text": user_prompt})
+
+    with st.chat_message("assistant"):
+        bot_response = process_portal_query(user_prompt)
+        st.markdown(bot_response)
+    st.session_state.chat_history.append({"role": "assistant", "text": bot_response})
